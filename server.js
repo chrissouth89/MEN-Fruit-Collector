@@ -4,6 +4,8 @@ const dotenv = require('dotenv')
 dotenv.config()
 const mongoose = require('mongoose')
 const Fruit = require('./models/fruit.js')
+const methodOverride = require('method-override')
+const morgan = require('morgan')
 
 // GLOBAL VARIABLE
 const app = express()
@@ -16,17 +18,47 @@ mongoose.connection.on('connected', () => {
 
 // MIDDLEWARE
 app.use(express.urlencoded({ extended: false }))
+app.use(methodOverride("_method"))
+app.use(morgan('dev'))
 
 // ROUTES
 
-// INDEX ROUTE
+// HOME ROUTE
 app.get('/', (req, res) => {
-    res.render('index.ejs')
+    res.render('home.ejs')
+})
+
+// INDEX ROUTE
+app.get('/fruits', async (req, res) => {
+    const allFruits = await Fruit.find({})
+    console.log(allFruits)
+    res.render('fruits/index.ejs', {
+        fruits: allFruits
+    })
 })
 
 // NEW ROUTE
 app.get('/fruits/new', (req, res) => {
     res.render('fruits/new.ejs')
+})
+
+// DELETE ROUTE
+app.delete('/fruits/:fruitId', async (req, res) => {
+    await Fruit.findByIdAndDelete(req.params.fruitId)
+    res.redirect('/fruits')
+})
+
+// UPDATE ROUTE
+app.put("/fruits/:fruitId", async (req, res) => {
+    if(req.body.isReadyToEat === 'on') {
+        req.body.isReadyToEat = true
+    } else {
+        req.body.isReadyToEat = false
+    }
+
+    await Fruit.findByIdAndUpdate(req.params.fruitId, req.body)
+
+    res.redirect(`/fruits/${req.params.fruitId}`)
 })
 
 // CREATE ROUTE
@@ -38,7 +70,24 @@ app.post('/fruits', async (req, res) => {
     }
     console.log(req.body)
     await Fruit.create(req.body)
-    res.redirect('/fruits/new')
+    res.redirect('/fruits')
+})
+
+// EDIT ROUTE
+app.get('/fruits/:fruitId/edit', async (req, res) => {
+    const foundFruit = await Fruit.findById(req.params.fruitId)
+    res.render("fruits/edit.ejs", {
+        fruit: foundFruit
+    })
+})
+
+// SHOW ROUTE
+app.get("/fruits/:fruitId", async (req, res) => {
+    const foundFruit = await Fruit.findById(req.params.fruitId)
+    console.log(foundFruit)
+    res.render("fruits/show.ejs", {
+        fruit: foundFruit
+    })
 })
 
 // APP LISTENER
